@@ -92,6 +92,7 @@ def confusionMatrix(Y_test, Y_pred):
 def replaceNA(df_train,df_test):	
 	c = df_train.select_dtypes(np.object).columns
 	df_train[c] = df_train[c].fillna("ReplaceNA")
+	c = df_test.select_dtypes(np.object).columns
 	df_test[c] = df_test[c].fillna("ReplaceNA")
 	return df_train,df_test
 
