@@ -12,11 +12,15 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import LabelEncoder
 np.set_printoptions(threshold=sys.maxsize)
 
-
 #https://stackoverflow.com/questions/43588679/issue-with-onehotencoder-for-categorical-features
 def handleCatagoricalData(train):
+	
+	train.columns
+	pd.get_dummies(train, prefix=['country'], drop_first=True)
+
 	obj =  LabelEncoder()	
 	makecoloums_State = OneHotEncoder(categories='auto')	
+	
 	temp = np.concatenate((
 	makecoloums_State.fit_transform(obj.fit_transform(train[:,0]).reshape(-1, 1)).toarray()[:,1:],
 	makecoloums_State.fit_transform(obj.fit_transform(train[:,1]).reshape(-1, 1)).toarray()[:,1:],
@@ -66,23 +70,21 @@ def handleCatagoricalData(train):
 	makecoloums_State.fit_transform(obj.fit_transform(train[:,77]).reshape(-1, 1)).toarray()[:,1:],
 	makecoloums_State.fit_transform(obj.fit_transform(train[:,78]).reshape(-1, 1)).toarray()[:,1:],
 	),axis=1)
-	print("original size : ",train.shape)
-	train = np.delete(train,[0,1,4,5,6,7,8,9,10,11,12,13,14,15,
-						  16,17,20,21,22,23,24,26,27,28,29,30,39,
-						  31,32,34,38,37,40,41,52,54,56,57,59,
-						  62,63,64,71,72,73,77,78],axis=1)
-	print("After Remove Coloum : ",train.shape)
-	print("Extended Coloum : ",temp.shape)
-	train = np.concatenate((train,temp),axis=1)
-	print("After Join Coloum : ",train.shape)
-	print(" : - - - - - - - - - - - - - - - - - : ")
-	return train
+	
+	return temp
 
 def standardScaler(train, test):
 	sc = StandardScaler()
 	train = sc.fit_transform(train)
 	test = sc.transform(test)
 	return train, test
+
+def dataframeToArray(df_trainY, df_testY):	
+#	X_train = df_train.iloc[:,:].values
+	Y_train = df_trainY.iloc[:,:].values
+#	X_test = df_test.iloc[:,:].values
+	Y_test = df_testY.iloc[:,1].values
+	return Y_train, Y_test
 
 def confusionMatrix(Y_test, Y_pred):
 	cm = confusion_matrix(Y_test, Y_pred)
@@ -116,13 +118,19 @@ def splitTheData(train, test):
 	Y_test = test[:,-1:]
 	return X_train, Y_train, X_test, Y_test
 
-#	getOutliersPercentile(dataChunk)
-#	checkOutliers(dataChunk, True)
-def removeImpurties(data, start_index, end_index):	
+def removeImpurties(cat,noncat):	
 	imputerformean,imputerformedian,imputerforfrequency = imputerStrategys(0)	
-	imputermedian = imputerformedian.fit(data[start_index:end_index,2:3])
-	data[start_index:end_index,2:3] = imputermedian.transform(data[start_index:end_index,2:3])
-	return data
+	
+	imputermedian = imputerformedian.fit(cat)
+	cat = imputermedian.transform(cat)
+	imputerfrequency = imputerforfrequency.fit(noncat)
+	noncat = imputerfrequency.transform(noncat)
+	X = np.hstack((cat, noncat))
+	return X
+
+def removeImpurtiesDataframe(df_train,df_test):
+	
+	return df_train,df_test
 
 def imputerStrategys(axis = 0):
 	imputerformean = Imputer(missing_values = 'NaN', strategy = 'mean', axis = axis)
@@ -130,7 +138,7 @@ def imputerStrategys(axis = 0):
 	imputerforfrequency = Imputer(missing_values = 'NaN', strategy = 'most_frequent', axis = axis)
 	return imputerformean,imputerformedian,imputerforfrequency
 
-def dataframeToArray(df_train,df_test,df_real):	
+def dataframeToArray1(df_train,df_test,df_real):	
 	X_train = df_train.iloc[:,1:].values
 	X_test = df_test.iloc[:,1:].values
 	Y_test = df_real.iloc[:,1:].values
@@ -176,13 +184,14 @@ def checkOutliers(dataset, hist):
 def correlationMatrix(dataset, dependentVariable, allVariables = True, k=3):
 	corrmat = dataset.corr()	
 	if allVariables:		
-		f, ax = plt.subplots(figsize=(12, 9))
+		f, ax = plt.subplots(figsize=(15, 12))
 		sns.heatmap(corrmat, vmax=.8, square=True);
 	else:
 		cols = corrmat.nlargest(k, dependentVariable)[dependentVariable].index
+		print(cols)
 		cm = np.corrcoef(dataset[cols].values.T)
 		sns.set(font_scale=1)
-		sns.heatmap(cm, cbar=True, annot=True, square=True, fmt='.2f', annot_kws={'size': 10}, yticklabels=cols.values, xticklabels=cols.values)
+		sns.heatmap(cm, cbar=True, annot=True, square=True, fmt='.2f', annot_kws={'size': 8}, yticklabels=cols.values, xticklabels=cols.values)
 	
 def RemoveOutliers(dataset):
 	mean = np.mean(dataset, axis=0)
