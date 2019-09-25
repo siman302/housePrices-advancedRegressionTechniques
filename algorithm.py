@@ -8,6 +8,7 @@ from sklearn.model_selection import KFold, cross_val_score, train_test_split
 from sklearn.metrics import mean_squared_error
 import xgboost as xgb
 import lightgbm as lgb
+import numpy as np
 
 #Validation function
 n_folds = 5

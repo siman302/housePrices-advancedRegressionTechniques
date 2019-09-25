@@ -17,16 +17,31 @@ from scipy.stats import norm, skew #for some statistics
 from scipy import stats
 
 def removeMissingValues(df_train):
-	imputerformean,imputerformedian,imputerforfrequency = imputerStrategys(0)	
 
-	df_train["GarageYrBlt"] = imputerforfrequency.fit_transform(df_train["GarageYrBlt"].values.reshape(-1, 1))
-
+	#imputerformean,imputerformedian,imputerforfrequency = imputerStrategys(0)	
+	#df_train["GarageYrBlt"] = imputerforfrequency.fit_transform(df_train["GarageYrBlt"].values.reshape(-1, 1))
+	
+	df_train['GarageYrBlt'].replace(np.nan, df_train['GarageYrBlt'].value_counts().idxmax(), inplace= True)	
+	df_train['Utilities'].replace(np.nan, df_train['Utilities'].value_counts().idxmax(), inplace= True)	
 	df_train['MasVnrType'].replace(np.nan, df_train['MasVnrType'].value_counts().idxmax(), inplace= True)
 	df_train['MSZoning'].replace(np.nan, df_train['MSZoning'].value_counts().idxmax(), inplace= True)
 	df_train['Electrical'].replace(np.nan, df_train['Electrical'].value_counts().idxmax(), inplace= True)
+	df_train['KitchenQual'].replace(np.nan, df_train['KitchenQual'].value_counts().idxmax(), inplace= True)
+	df_train['Exterior2nd'].replace(np.nan, df_train['Exterior2nd'].value_counts().idxmax(), inplace= True)
+	df_train['Exterior1st'].replace(np.nan, df_train['Exterior1st'].value_counts().idxmax(), inplace= True)
+	df_train['SaleType'].replace(np.nan, df_train['SaleType'].value_counts().idxmax(), inplace= True)
+	df_train['GarageCars'].replace(np.nan, df_train['GarageCars'].value_counts().idxmax(), inplace= True)
+	df_train['Functional'].replace(np.nan, df_train['Functional'].value_counts().idxmax(), inplace= True)
 
+	df_train["BsmtFinSF2"] = df_train.groupby("OverallQual")["BsmtFinSF2"].transform(lambda x: x.fillna(x.median()))
+	df_train["BsmtHalfBath"] = df_train.groupby("OverallQual")["BsmtHalfBath"].transform(lambda x: x.fillna(x.median()))
+	df_train["BsmtUnfSF"] = df_train.groupby("OverallQual")["BsmtUnfSF"].transform(lambda x: x.fillna(x.median()))
+	df_train["TotalBsmtSF"] = df_train.groupby("OverallQual")["TotalBsmtSF"].transform(lambda x: x.fillna(x.median()))	
+	df_train["BsmtFinSF1"] = df_train.groupby("OverallQual")["BsmtFinSF1"].transform(lambda x: x.fillna(x.median()))
+	df_train["GarageArea"] = df_train.groupby("OverallQual")["GarageArea"].transform(lambda x: x.fillna(x.median()))
+	df_train["BsmtFullBath"] = df_train.groupby("OverallQual")["BsmtFullBath"].transform(lambda x: x.fillna(x.median()))
 	df_train["LotFrontage"] = df_train.groupby("OverallQual")["LotFrontage"].transform(lambda x: x.fillna(x.median()))
-	df_train["MasVnrArea"] = df_train.groupby("OverallQual")["MasVnrArea"].transform(lambda x: x.fillna(x.median()))
+	df_train["MasVnrArea"] = df_train.groupby("OverallQual")["MasVnrArea"].transform(lambda x: x.fillna(x.median()))	
 	return df_train
 
 def missingValueGraph(data):
@@ -53,7 +68,7 @@ def checkDistribution(df_train):
 	plt.figure()
 	stats.probplot(df_train, plot=plt)
 	plt.show()
-	print(skew(df_train)) # +ve value tell it is right skew
+	print(skew(df_train)) # +ve value tell it is right skew and viceversa
 
 
 def outliergraph(df_train,IndeColoum,deColoum):
@@ -237,9 +252,9 @@ def checkOutliers(dataset, hist):
 		sns.boxplot(x=dataset)
 
 def correlationMatrix(dataset, dependentVariable, allVariables = True, k=3):
-	corrmat = dataset.corr()	
+	corrmat = dataset.corr()
+	f, ax = plt.subplots(figsize=(15, 12))	
 	if allVariables:		
-		f, ax = plt.subplots(figsize=(15, 12))
 		sns.heatmap(corrmat, vmax=.8, square=True);
 	else:
 		cols = corrmat.nlargest(k, dependentVariable)[dependentVariable].index
