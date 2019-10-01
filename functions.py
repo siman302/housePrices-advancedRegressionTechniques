@@ -7,10 +7,79 @@ import matplotlib.pyplot as plt
 from numpy import percentile
 from sklearn.preprocessing import Imputer
 from sklearn.metrics import confusion_matrix
+import missingno as msno
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import LabelEncoder
 np.set_printoptions(threshold=sys.maxsize)
+import numpy as np
+from scipy.stats import norm, skew #for some statistics
+from scipy import stats
+
+def removeMissingValues(df_train):
+
+	#imputerformean,imputerformedian,imputerforfrequency = imputerStrategys(0)	
+	#df_train["GarageYrBlt"] = imputerforfrequency.fit_transform(df_train["GarageYrBlt"].values.reshape(-1, 1))
+	
+	df_train['GarageYrBlt'].replace(np.nan, df_train['GarageYrBlt'].value_counts().idxmax(), inplace= True)	
+	df_train['Utilities'].replace(np.nan, df_train['Utilities'].value_counts().idxmax(), inplace= True)	
+	df_train['MasVnrType'].replace(np.nan, df_train['MasVnrType'].value_counts().idxmax(), inplace= True)
+	df_train['MSZoning'].replace(np.nan, df_train['MSZoning'].value_counts().idxmax(), inplace= True)
+	df_train['Electrical'].replace(np.nan, df_train['Electrical'].value_counts().idxmax(), inplace= True)
+	df_train['KitchenQual'].replace(np.nan, df_train['KitchenQual'].value_counts().idxmax(), inplace= True)
+	df_train['Exterior2nd'].replace(np.nan, df_train['Exterior2nd'].value_counts().idxmax(), inplace= True)
+	df_train['Exterior1st'].replace(np.nan, df_train['Exterior1st'].value_counts().idxmax(), inplace= True)
+	df_train['SaleType'].replace(np.nan, df_train['SaleType'].value_counts().idxmax(), inplace= True)
+	df_train['GarageCars'].replace(np.nan, df_train['GarageCars'].value_counts().idxmax(), inplace= True)
+	df_train['Functional'].replace(np.nan, df_train['Functional'].value_counts().idxmax(), inplace= True)
+
+	df_train["BsmtFinSF2"] = df_train.groupby("OverallQual")["BsmtFinSF2"].transform(lambda x: x.fillna(x.median()))
+	df_train["BsmtHalfBath"] = df_train.groupby("OverallQual")["BsmtHalfBath"].transform(lambda x: x.fillna(x.median()))
+	df_train["BsmtUnfSF"] = df_train.groupby("OverallQual")["BsmtUnfSF"].transform(lambda x: x.fillna(x.median()))
+	df_train["TotalBsmtSF"] = df_train.groupby("OverallQual")["TotalBsmtSF"].transform(lambda x: x.fillna(x.median()))	
+	df_train["BsmtFinSF1"] = df_train.groupby("OverallQual")["BsmtFinSF1"].transform(lambda x: x.fillna(x.median()))
+	df_train["GarageArea"] = df_train.groupby("OverallQual")["GarageArea"].transform(lambda x: x.fillna(x.median()))
+	df_train["BsmtFullBath"] = df_train.groupby("OverallQual")["BsmtFullBath"].transform(lambda x: x.fillna(x.median()))
+	df_train["LotFrontage"] = df_train.groupby("OverallQual")["LotFrontage"].transform(lambda x: x.fillna(x.median()))
+	df_train["MasVnrArea"] = df_train.groupby("OverallQual")["MasVnrArea"].transform(lambda x: x.fillna(x.median()))	
+	return df_train
+
+def missingValueGraph(data):
+	msno.heatmap(data) # relation of missing values with other values
+	print(data.isnull().sum().sort_values(ascending=False))
+
+def replaceNaToNone(data):
+	for col in ('Alley', 'BsmtQual', 'BsmtCond', 'BsmtExposure', 'BsmtFinType1', 'BsmtFinType2',
+			  'FireplaceQu', 'GarageType', 'GarageFinish', 'GarageQual', 'GarageCond',
+			   'PoolQC', 'Fence', 'MiscFeature'):
+		data[col] = data[col].fillna('None')
+	return data
+
+def checkDistribution(df_train):		
+	sns.distplot(df_train , fit=norm)
+	(mu, sigma) = norm.fit(df_train)
+
+	# Now plot the distribution
+	plt.legend(['Normal dist. ($\mu=$ {:.2f} and $\sigma=$ {:.2f} )'.format(mu, sigma)],loc='best')
+	plt.ylabel('Frequency')
+	plt.title('SalePrice distribution')
+
+	# Get also the QQ-plot
+	plt.figure()
+	stats.probplot(df_train, plot=plt)
+	plt.show()
+	print(skew(df_train)) # +ve value tell it is right skew and viceversa
+
+
+def outliergraph(df_train,IndeColoum,deColoum):
+	fig, ax = plt.subplots()
+	ax.scatter(x = df_train[IndeColoum], y = df_train[deColoum])
+	plt.ylabel(deColoum, fontsize=13)
+	plt.xlabel(IndeColoum, fontsize=13)
+	plt.show()	
+	#plt.style.use('ggplot')
+	#plt.hist(df_train[IndeColoum], bins=60)
+	sns.boxplot(x=df_train[IndeColoum])
 
 #https://stackoverflow.com/questions/43588679/issue-with-onehotencoder-for-categorical-features
 def handleCatagoricalData(train):
@@ -92,9 +161,10 @@ def confusionMatrix(Y_test, Y_pred):
 	return cm
 
 def replaceNA(df_train,df_test):	
-	c = df_train.select_dtypes(np.object).columns
-	df_train[c] = df_train[c].fillna("ReplaceNA")
-	df_test[c] = df_test[c].fillna("ReplaceNA")
+	col = df_train.select_dtypes(np.object).columns
+	print(col)
+	df_train[col] = df_train[col].fillna("None")
+	df_test[col] = df_test[col].fillna("None")
 	return df_train,df_test
 
 def missingValueHandler(train, test, div):
@@ -182,9 +252,9 @@ def checkOutliers(dataset, hist):
 		sns.boxplot(x=dataset)
 
 def correlationMatrix(dataset, dependentVariable, allVariables = True, k=3):
-	corrmat = dataset.corr()	
+	corrmat = dataset.corr()
+	f, ax = plt.subplots(figsize=(15, 12))	
 	if allVariables:		
-		f, ax = plt.subplots(figsize=(15, 12))
 		sns.heatmap(corrmat, vmax=.8, square=True);
 	else:
 		cols = corrmat.nlargest(k, dependentVariable)[dependentVariable].index

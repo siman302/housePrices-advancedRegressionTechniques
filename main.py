@@ -1,9 +1,16 @@
 
-from sklearn.metrics import mean_squared_error
-from math import sqrt
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
+import warnings
+def ignore_warn(*args, **kwargs):
+    pass
+warnings.warn = ignore_warn #ignore annoying warning (from sklearn and seaborn)
+
+
 try:
-	from functions import removeImpurties, dataframeToArray, replaceNA, getDatasets, correlationMatrix
-	from algorithm import linearRegression
+	from functions import removeMissingValues, missingValueGraph, replaceNaToNone, checkDistribution, outliergraph, getDatasets, correlationMatrix
+	from algorithm import AlgoXgboost
 except:
     print("HeaderFiles not in access")
     raise SystemExit    
@@ -12,91 +19,149 @@ except:
 # Import dataset
 df_train,df_test,df_testY = getDatasets()
 
+
 # Get Info About dataset
-df_train.info()
+df_train.columns
+
 df_train.info()
 df_test.info()
 
 df_train.head(2)
 df_test.head(2)
 
-df_train.isnull().values.sum()
-df_train.notnull().values.sum()
-df_test.isnull().values.sum()
-
-df_train.isnull().sum().sort_values(ascending=False)
-df_test.isnull().sum().sort_values(ascending=False)
-
 df_train.dtypes
 df_test.dtypes
 
-# Analysis
-correlationMatrix(df_train, "SalePrice", False, 15)
+# Convert some coloums into the Object because they are the catagorical objects
+# Remove Outliners only in non-catagorical dataset
+# Remember : Apply only on the df_train dataset and 
+# Note : OverallQual, OverallCond there are catagorical variables too 
+df_train["MSSubClass"] = df_train["MSSubClass"].astype(object) 
+df_train["MSSubClass"] = df_train["MSSubClass"].astype(object) 
 
-# change the NA to removeNA to not confuse with null
-df_train,df_test = replaceNA(df_train,df_test)
-df_train.isnull().values.sum()
-df_test.isnull().values.sum()
+df_train.select_dtypes(exclude=[np.object]).columns
+temp = df_train[df_train.select_dtypes(exclude=[np.object]).columns].head(2)
+del temp
 
-# drop the unreleated coloums below the 0.3
-df_trainY = df_train[['SalePrice']]
-df_train = df_train[['OverallQual', 'GrLivArea', 'GarageCars', 'GarageArea','TotalBsmtSF', '1stFlrSF', 'FullBath', 'TotRmsAbvGrd', 'YearBuilt','YearRemodAdd', 'GarageYrBlt', 'MasVnrArea', 'Fireplaces','BsmtFinSF1']]
-df_test = df_test[['OverallQual', 'GrLivArea', 'GarageCars', 'GarageArea','TotalBsmtSF', '1stFlrSF', 'FullBath', 'TotRmsAbvGrd', 'YearBuilt','YearRemodAdd', 'GarageYrBlt', 'MasVnrArea', 'Fireplaces','BsmtFinSF1']]
-
-
-# Sparate the cat vs noncat
-#cat_df_train = df_train[df_train.select_dtypes(include=[np.object]).columns].head(df_train.shape[0])
-#noncat_df_train = df_train[df_train.select_dtypes(exclude=[np.object]).columns].head(df_train.shape[0])
-#cat_df_test = df_test[df_test.select_dtypes(include=[np.object]).columns].head(df_train.shape[0])
-#noncat_df_test = df_test[df_test.select_dtypes(exclude=[np.object]).columns].head(df_train.shape[0])
-#cat_df_train.isnull().values.sum()
-#noncat_df_train.isnull().values.sum()
-#cat_df_test.isnull().values.sum()
-#noncat_df_test.isnull().values.sum()
-	# handle the catagorical variable
-	# Way 001 : when you don't have all the vales
-#cat_df_train["MSZoning"].value_counts()
-#pd.get_dummies(cat_df_train['MSZoning'],prefix=['MSZoning'])
-#def_train = handleCatagoricalData(cat_df_train)	
-	# Way 002 : when you kn0w the coloums
-#cat_df_test.columns
-#pd.get_dummies(cat_df_train['MSZoning'].astype('category',categories=["A","C","FV","I","RH","RL","RP","RM"]),prefix=[cat_df_train.columns[0]],drop_first=True).shape
-
-
-# Sparate the cat vs noncat
-cat_df_train = df_train[['OverallQual','YearBuilt','YearRemodAdd','GarageYrBlt']]
-noncat_df_train = df_train[['GrLivArea','GarageCars','GarageArea','TotalBsmtSF','1stFlrSF','FullBath','TotRmsAbvGrd','MasVnrArea','Fireplaces','BsmtFinSF1']]
-
-cat_df_test = df_test[['OverallQual','YearBuilt','YearRemodAdd','GarageYrBlt']]
-noncat_df_test = df_test[['GrLivArea','GarageCars','GarageArea','TotalBsmtSF','1stFlrSF','FullBath','TotRmsAbvGrd','MasVnrArea','Fireplaces','BsmtFinSF1']]
-
-# Remove null values by frequency & median
-cat_df_train.isnull().values.sum()
-noncat_df_train.isnull().values.sum()
-
-cat_df_test.isnull().values.sum()
-noncat_df_test.isnull().values.sum()
-
-X_train = removeImpurties(cat_df_train,noncat_df_train)
-X_test = removeImpurties(cat_df_test,noncat_df_test)
+df_train.shape
+outliergraph(df_train,'LotFrontage','SalePrice')
+df_train = df_train.drop(df_train[(df_train['LotFrontage']>250)].index)
+df_train = df_train.drop(df_train[(df_train['LotArea']>150000)].index)
+df_train = df_train.drop(df_train[(df_train['MasVnrArea']>1200)].index)
+df_train = df_train.drop(df_train[(df_train['BsmtFinSF1']>2000)].index)
+df_train = df_train.drop(df_train[(df_train['BsmtFinSF2']>1200)].index)
+df_train = df_train.drop(df_train[(df_train['BsmtUnfSF']>2200)].index)
+df_train = df_train.drop(df_train[(df_train['1stFlrSF']>3000)].index)
+df_train = df_train.drop(df_train[(df_train['1stFlrSF']>3000)].index)
+df_train = df_train.drop(df_train[(df_train['2ndFlrSF']>1750)].index)
+df_train = df_train.drop(df_train[(df_train['LowQualFinSF']>550)].index)
+df_train = df_train.drop(df_train[(df_train['GrLivArea']>4000) & (df_train['GrLivArea']<300000)].index)
+df_train = df_train.drop(df_train[(df_train['GarageArea']>1200)].index)
+df_train = df_train.drop(df_train[(df_train['OpenPorchSF']>800)].index)
+df_train = df_train.drop(df_train[(df_train['OpenPorchSF']>500)].index)
+df_train = df_train.drop(df_train[(df_train['EnclosedPorch']>500)].index)
+df_train = df_train.drop(df_train[(df_train['MiscVal']>3000)].index)
+df_train = df_train.drop(df_train[(df_train['SalePrice']>700000)].index)
+df_train.shape # 27 rows drops
 
 
-Y_train, Y_test = dataframeToArray(df_trainY, df_testY)
-
-#	getOutliersPercentile(dataChunk)
-#	checkOutliers(dataChunk, True)
-# apply the linearRegression
-Y_predict = linearRegression(X_train, Y_train, X_test)
-
-# RMSE
-rms = sqrt(mean_squared_error(Y_test, Y_predict))
-print(rms)
+# Combine the test and test result
+df_testY.rename(columns = {'Id': 'Tid'}, inplace = True)
+df_test = pd.concat([df_test, df_testY], axis=1, sort=False)
+del df_testY
 
 
-#import numpy as np
-#from sklearn.metrics import mean_squared_error
-#from math import sqrt
+# check the ids
+print(df_test['Id'].equals(df_test['Tid']))
+print(df_test[['Id','Tid']])
+df_test.drop("Tid", axis = 1, inplace = True)
 
-# important link
-# https://www.geeksforgeeks.org/python-replace-nan-values-with-average-of-columns/
-# https://www.datacamp.com/community/tutorials/categorical-data
+# Combine the datasets
+dataset = pd.concat([df_train, df_test])
+print(df_train.shape)
+print(df_test.shape)
+print(dataset.shape)
+dataset = pd.concat([df_train, df_test], sort=False)
+
+# Save the Id column
+train_Ids = df_train['Id']
+test_Ids = df_test['Id']
+print(train_Ids.size)
+print(test_Ids.size)
+del df_train
+del df_test
+
+
+# drop the id column of a dataset
+dataset.drop("Id", axis = 1, inplace = True)
+dataset.shape
+
+
+# Our dependent Variable Analysis
+dataset['SalePrice'].describe()
+plt.hist(dataset['SalePrice'],bins=100)
+	# make it a more normally distributed if not
+	# beacuse (linear) models love normally distributed data
+checkDistribution(dataset['SalePrice']) # graph show it is right skew
+dataset["SalePrice"] = np.log1p(dataset["SalePrice"])  # apply log(1+x) to make it normal distribution
+checkDistribution(dataset['SalePrice']) # graph show it is right skew
+plt.hist(dataset['SalePrice'],bins=100)
+
+
+# replace the NA to the None to eliminate the confile
+missingValueGraph(dataset)
+dataset = replaceNaToNone(dataset)
+missingValueGraph(dataset)
+
+
+# Analysis the featuers or relation of dependent and independent variables
+correlationMatrix(dataset, "SalePrice")
+correlationMatrix(dataset, "SalePrice", False, 15)
+
+
+# remove missing values from catagorical and non catagorical variables
+missingValueGraph(dataset)
+dataset = removeMissingValues(dataset)
+missingValueGraph(dataset)
+
+
+# Handle Catagorical Variables and avoid dummy variable trap
+dataset = pd.get_dummies(dataset, drop_first=True)
+
+
+# Handle Non-catagorical Variables
+# do it later
+#nonCat_df_train['TotalSF'] = nonCat_df_train['TotalBsmtSF'] + nonCat_df_train['1stFlrSF'] + nonCat_df_train['2ndFlrSF']
+#nonCat_df_train.drop("TotalBsmtSF", axis = 1, inplace = True)
+#nonCat_df_train.drop("1stFlrSF", axis = 1, inplace = True)
+#nonCat_df_train.drop("2ndFlrSF", axis = 1, inplace = True)
+
+# Check the skew of all numerical features
+#skewed_feats = nonCat_df_train.skew(axis = 0, skipna = True).sort_values(ascending=False)
+#skewness = pd.DataFrame({'Skew' :skewed_feats})
+#skewness = skewness[abs(skewness) > 0.75]
+#print("numerical features to Box Cox transform count".format(skewness.shape[0]))
+
+## transform non-normal dependent variables into a normal shape
+#from scipy.special import boxcox1p
+#skewed_features = skewness.index
+#lam = 0.15
+#nonCat_df_train_skew = pd.DataFrame() 
+#for feat in skewed_features:
+#    nonCat_df_train_skew[feat] = boxcox1p(nonCat_df_train[feat], lam)
+
+
+# Split the dataset into test and train
+df_train = dataset[0:1456-23]
+df_test = dataset[1456-23:]
+
+df_trainY = df_train['SalePrice']
+df_testY = df_test['SalePrice']
+
+df_train.drop("SalePrice", axis = 1, inplace = True)
+df_test.drop("SalePrice", axis = 1, inplace = True)
+
+Xg = AlgoXgboost(df_train, df_trainY, df_test, df_testY)
+print(Xg)
+
+
