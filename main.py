@@ -143,7 +143,6 @@ lasso = AlgoLasso(df_train, df_trainY) #
 
 # Kernal
 predict = Kernal(df_train, df_trainY, df_test, df_testY, lgb, rF, xgb)
-
-#df_testY['SalePrice'] = predict
-#df_testY.to_csv("SubmitResults.csv", sep=',', index=False)
+df_testY['SalePrice'] = predict
+df_testY.to_csv("SubmitResults.csv", sep=',', index=False)
 
